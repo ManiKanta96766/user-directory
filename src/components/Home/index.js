@@ -1,43 +1,41 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { UserContext } from '../../context/UserContext'; // Assuming you have UserContext
 import { useNavigate } from 'react-router-dom';
 
 const Home = () => {
-  const { userList } = useContext(UserContext);  // Get userList from context
-  const [searchQuery, setSearchQuery] = useState('');  // State for search query
-  const [filteredUsers, setFilteredUsers] = useState([]);  // State for filtered users
-  const [currentPage, setCurrentPage] = useState(1);  // Track current page
-  const [usersPerPage] = useState(10);  // Number of users per page
-  const [paginatedUsers, setPaginatedUsers] = useState([]);  // Subset of users to display
-const navigate=useNavigate()
+  const { userList } = useContext(UserContext); // Get userList from context
+  const [searchQuery, setSearchQuery] = useState(''); // State for search query
+  const [filteredUsers, setFilteredUsers] = useState([]); // State for filtered users
+  const [currentPage, setCurrentPage] = useState(1); // Track current page
+  const [usersPerPage] = useState(10); // Number of users per page
+  const [paginatedUsers, setPaginatedUsers] = useState([]); // Subset of users to display
+  const navigate = useNavigate();
+
   // Sorting and filtering logic
   useEffect(() => {
     // Sort users alphabetically
     const sortedUsers = [...userList].sort((a, b) => a.name.localeCompare(b.name));
-    setFilteredUsers(sortedUsers);  // Set filtered users initially
+    setFilteredUsers(sortedUsers); // Set filtered users initially
   }, [userList]);
 
   // Handle search input change
   const handleSearch = (event) => {
     const query = event.target.value;
-    setSearchQuery(query);  // Update search query
+    setSearchQuery(query); // Update search query
 
     // Filter the users based on the search query
     const filtered = userList.filter((user) =>
       user.name.toLowerCase().includes(query.toLowerCase())
     );
-    setFilteredUsers(filtered);  // Set filtered users based on search query
+    setFilteredUsers(filtered); // Set filtered users based on search query
   };
 
-  // Calculate total pages based on users and users per page
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-
-  // Get the users for the current page
-  const getPaginatedUsers = () => {
+  // Memoized function to get paginated users
+  const getPaginatedUsers = useCallback(() => {
     const indexOfLastUser = currentPage * usersPerPage;
     const indexOfFirstUser = indexOfLastUser - usersPerPage;
     return filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-  };
+  }, [currentPage, filteredUsers, usersPerPage]);
 
   // Change page when page number is clicked
   const handlePageChange = (pageNumber) => {
@@ -46,13 +44,13 @@ const navigate=useNavigate()
 
   // Handle user profile navigation
   const handleUserProfile = (id) => {
-   navigate(`/user/${id}`)
+    navigate(`/user/${id}`);
   };
 
-  // Update paginated users when the current page or search query changes
+  // Update paginated users when the current page or filtered users change
   useEffect(() => {
     setPaginatedUsers(getPaginatedUsers());
-  }, [currentPage, filteredUsers]);
+  }, [getPaginatedUsers]); // Add the memoized function as a dependency
 
   return (
     <div>
@@ -99,7 +97,7 @@ const navigate=useNavigate()
         </button>
 
         {/* Page Number Buttons */}
-        {[...Array(totalPages)].map((_, index) => (
+        {[...Array(Math.ceil(filteredUsers.length / usersPerPage))].map((_, index) => (
           <button
             key={index}
             onClick={() => handlePageChange(index + 1)}
@@ -115,7 +113,7 @@ const navigate=useNavigate()
 
         <button 
           onClick={() => handlePageChange(currentPage + 1)} 
-          disabled={currentPage === totalPages}>
+          disabled={currentPage === Math.ceil(filteredUsers.length / usersPerPage)}>
           Next
         </button>
       </div>
